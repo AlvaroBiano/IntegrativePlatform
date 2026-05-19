@@ -1,0 +1,262 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(PATIENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  patientProfile PatientProfile?
+  tips          Tip[]
+  plans         Plan[]
+  patientInfos  PatientInfo[]
+  messages      Message[]
+  sentMessages  Message[] @relation("SentMessages")
+  files         PatientFile[]
+  protocols     Protocol[]
+  appointments  AppointmentLink[]
+  createdInvites Invite[] @relation("InviteCreator")
+  usedInvite    Invite?   @relation("InviteUsedBy")
+
+  @@index([role])
+}
+
+model PatientProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone       String?
+  birthDate   DateTime?
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Tip {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @db.Text
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model PatientInfo {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  content     String   @db.Text
+  category    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([category])
+}
+
+model Message {
+  id          String       @id @default(cuid())
+  senderId    String
+  sender      User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String?
+  recipient   User?        @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  isBroadcast Boolean      @default(false)
+  subject     String
+  content     String       @db.Text
+  readAt      DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([recipientId])
+  @@index([isBroadcast])
+  @@index([createdAt(sort: Desc)])
+}
+
+model PatientFile {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?   @db.Text
+  fileUrl     String
+  fileName    String
+  fileSize    Int?
+  mimeType    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model Protocol {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?   @db.Text
+  content     String    @db.Text
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([createdAt(sort: Desc)])
+}
+
+model AppointmentLink {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  url         String
+  description String?   @db.Text
+  scheduledAt DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([scheduledAt(sort: Desc)])
+}
+
+model Invite {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  email       String?
+  createdBy   String
+  creator     User      @relation("InviteCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  usedAt      DateTime?
+  usedById    String?   @unique
+  usedBy      User?     @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+
+  @@index([token])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model BlogPost {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  title       String
+  excerpt     String?
+  content     String       @db.Text
+  coverImage  String?
+  status      PostStatus   @default(DRAFT)
+  publishedAt DateTime?
+  seoTitle    String?
+  seoDesc     String?
+  authorId    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status])
+  @@index([publishedAt(sort: Desc)])
+  @@index([slug])
+}
+
+model Book {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  author        String
+  description   String   @db.Text
+  coverImage    String
+  price         Decimal? @db.Decimal(10, 2)
+  purchaseUrl   String
+  isbn          String?
+  pages         Int?
+  publisher     String?
+  publishedYear Int?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([slug])
+}
+
+model LandingSection {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  title       String
+  subtitle    String?
+  content     String?  @db.Text
+  imageUrl    String?
+  buttonText  String?
+  buttonUrl   String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([order])
+  @@index([isActive])
+}
+
+model AdPlacement {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  adCode      String   @db.Text
+  page        AdPage
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([page])
+  @@index([isActive])
+}
+
+enum Role {
+  ADMIN
+  PATIENT
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AdPage {
+  BLOG_LIST
+  BLOG_DETAIL
+  BOOKSTORE_LIST
+  BOOKSTORE_DETAIL
+}
