@@ -3,7 +3,11 @@ import { SignJWT, jwtVerify } from 'jose'
 import { prisma } from './prisma'
 import bcrypt from 'bcrypt'
 
-const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'fallback-secret-change-in-production')
+const SECRET_KEY = process.env.NEXTAUTH_SECRET
+if (!SECRET_KEY) {
+  throw new Error('Missing NEXTAUTH_SECRET environment variable')
+}
+const SECRET = new TextEncoder().encode(SECRET_KEY)
 
 interface TokenPayload {
   id: string
