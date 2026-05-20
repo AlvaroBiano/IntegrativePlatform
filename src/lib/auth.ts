@@ -3,11 +3,13 @@ import { SignJWT, jwtVerify } from 'jose'
 import { prisma } from './prisma'
 import bcrypt from 'bcrypt'
 
-const SECRET_KEY = process.env.NEXTAUTH_SECRET
-if (!SECRET_KEY) {
-  throw new Error('Missing NEXTAUTH_SECRET environment variable')
+function getSecret(): Uint8Array {
+  const key = process.env.NEXTAUTH_SECRET
+  if (!key) {
+    throw new Error('Missing NEXTAUTH_SECRET environment variable')
+  }
+  return new TextEncoder().encode(key)
 }
-const SECRET = new TextEncoder().encode(SECRET_KEY)
 
 interface TokenPayload {
   id: string
@@ -20,12 +22,12 @@ export async function createToken(user: TokenPayload): Promise<string> {
   return new SignJWT({ id: user.id, email: user.email, name: user.name, role: user.role })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('7d')
-    .sign(SECRET)
+    .sign(getSecret())
 }
 
 export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET)
+    const { payload } = await jwtVerify(token, getSecret())
     return payload as unknown as TokenPayload
   } catch {
     return null
