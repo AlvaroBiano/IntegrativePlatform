@@ -1,9 +1,8 @@
 'use client'
-export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
-import { Mail, Calendar, X } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
+import { Mail, MailOpen, Calendar, X, Loader2, User, Send } from 'lucide-react'
 
 interface Message {
   id: string
@@ -18,6 +17,8 @@ interface Message {
 export default function MessagesPage() {
   const t = useTranslations('patient')
   const c = useTranslations('common')
+  const locale = useLocale()
+
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
@@ -39,66 +40,154 @@ export default function MessagesPage() {
     )
   }
 
-  if (loading) return <p className="text-center py-12">{t('loading')}</p>
-
-  if (messages.length === 0) {
+  if (loading) {
     return (
-      <div className="card text-center py-12">
-        <Mail size={48} className="mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-500">{t('noMessages')}</p>
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <Loader2 className="animate-spin text-primary-600" size={36} />
+        <p className="text-slate-500 font-semibold text-sm">{c('loading')}</p>
       </div>
     )
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('messages')}</h1>
-      <div className="space-y-4">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`card cursor-pointer hover:shadow-lg transition-shadow ${
-              !msg.readAt ? 'border-l-4 border-l-purple-500' : ''
-            }`}
-            onClick={() => {
-              setSelectedMessage(msg)
-              if (!msg.readAt) markAsRead(msg.id)
-            }}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-gray-900">{msg.subject}</h3>
-                  {!msg.readAt && (
-                    <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded">{c('new')}</span>
-                  )}
-                  {msg.isBroadcast && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Broadcast</span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">De: {msg.sender.name}</p>
-              </div>
-              <div className="flex items-center text-sm text-gray-500">
-                <Calendar size={14} className="mr-1" />
-                {new Date(msg.createdAt).toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-        ))}
+    <div className="space-y-8 animate-fade-in">
+      <div className="space-y-0.5">
+        <h1 className="text-3xl font-extrabold font-heading text-slate-900 tracking-tight">{t('messages')}</h1>
+        <p className="text-sm text-slate-500 font-medium">Seu canal direto e seguro de comunicação com os profissionais de saúde.</p>
       </div>
 
+      {messages.length === 0 ? (
+        <div className="glass-card border border-slate-100/50 text-center py-16 px-6 shadow-xl shadow-slate-100/10">
+          <Mail size={48} className="mx-auto text-slate-300 mb-4" />
+          <p className="text-slate-500 text-sm font-semibold">{t('noMessages')}</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {messages.map((msg) => {
+            const isUnread = !msg.readAt
+            return (
+              <div
+                key={msg.id}
+                onClick={() => {
+                  setSelectedMessage(msg)
+                  if (isUnread) markAsRead(msg.id)
+                }}
+                className={`glass-card glass-card-hover border border-slate-100/50 p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer transition-all ${
+                  isUnread
+                    ? 'border-l-4 border-l-primary-500 shadow-md shadow-primary-50/20 bg-primary-50/5'
+                    : 'opacity-90 hover:opacity-100'
+                }`}
+              >
+                <div className="flex items-start gap-4 flex-1 w-full">
+                  <div className={`p-2.5 rounded-xl border mt-0.5 ${
+                    isUnread
+                      ? 'bg-primary-50 text-primary-600 border-primary-100'
+                      : 'bg-slate-50 text-slate-400 border-slate-150'
+                  }`}>
+                    {isUnread ? <Mail size={18} className="animate-bounce" /> : <MailOpen size={18} />}
+                  </div>
+                  
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className={`text-base font-bold font-heading text-slate-900 leading-snug truncate ${
+                        isUnread ? 'font-extrabold' : ''
+                      }`}>{msg.subject}</h3>
+                      
+                      {isUnread && (
+                        <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary-600 text-white shadow-sm">
+                          {c('new')}
+                        </span>
+                      )}
+                      {msg.isBroadcast && (
+                        <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-100">
+                          {t('broadcastMessage') || 'Broadcast'}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-slate-500 font-semibold flex items-center gap-1">
+                      <User size={12} className="text-slate-400" />
+                      De: <span className="text-slate-700">{msg.sender.name}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center text-xs text-slate-400 font-semibold gap-1.5 self-end md:self-auto shrink-0 pl-14 md:pl-0">
+                  <Calendar size={14} className="text-slate-300" />
+                  {new Date(msg.createdAt).toLocaleDateString(locale === 'pt-BR' ? 'pt-BR' : 'en-US', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Message Reader Modal */}
       {selectedMessage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedMessage(null)}>
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">{selectedMessage.subject}</h2>
-              <button onClick={() => setSelectedMessage(null)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => setSelectedMessage(null)}
+        >
+          <div
+            className="bg-white/95 backdrop-blur-md rounded-2xl max-w-2xl w-full border border-slate-100/60 shadow-2xl overflow-hidden p-6 animate-drop-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold font-heading text-slate-900 leading-snug">{selectedMessage.subject}</h2>
+                  {selectedMessage.isBroadcast && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-100">
+                      {t('broadcastMessage') || 'Broadcast'}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 font-semibold">
+                  <span className="flex items-center gap-1 text-slate-500">
+                    <User size={13} className="text-slate-400" />
+                    De: <span className="font-bold text-slate-700">{selectedMessage.sender.name}</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar size={13} className="text-slate-300" />
+                    {new Date(selectedMessage.createdAt).toLocaleDateString(locale === 'pt-BR' ? 'pt-BR' : 'en-US', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setSelectedMessage(null)}
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-50 p-2 rounded-xl transition-all self-start"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <p className="text-sm text-gray-500 mb-4">De: {selectedMessage.sender.name}</p>
-            <div className="whitespace-pre-wrap text-gray-700">{selectedMessage.content}</div>
+            
+            <div className="py-6 overflow-y-auto max-h-[50vh] text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">
+              {selectedMessage.content}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setSelectedMessage(null)}
+                className="btn-secondary py-2 px-5 text-sm"
+              >
+                {c('close') || 'Fechar'}
+              </button>
+            </div>
           </div>
         </div>
       )}
     </div>
   )
 }
+
